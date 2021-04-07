@@ -1,19 +1,20 @@
 package com.ecommerce.microCommerce.web.controller;
 
 import com.ecommerce.microCommerce.dao.ProductDao;
+import com.ecommerce.microCommerce.web.exceptions.ProductNotFoundException;
 import com.ecommerce.microCommerce.model.Product;
-import com.fasterxml.jackson.databind.ser.FilterProvider;
-import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
-import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
 
+@Api(value = "Product manager")
 @RestController
 public class ProductController {
 
@@ -21,40 +22,31 @@ public class ProductController {
     private ProductDao productDao;
 
     //Get product list
-    @RequestMapping(value = "/Products", method = RequestMethod.GET)
+    @ApiOperation(value = "Show all existing products")
+    @GetMapping(value = "/Products")
+    public List<Product> productsList() {
 
-    public MappingJacksonValue productsList() {
-        List<Product> products = productDao.findAll();
+        return productDao.findAll();
 
-        SimpleBeanPropertyFilter filter =
-                SimpleBeanPropertyFilter.serializeAllExcept("buyPrice");
-
-        FilterProvider filterList =
-                new SimpleFilterProvider().addFilter("dynamicFilter", filter);
-
-        MappingJacksonValue filterProducts =
-                new MappingJacksonValue(products);
-
-        filterProducts.setFilters(filterList);
-
-        return filterProducts;
     }
 
     //Get product with ID
-    @RequestMapping(value = "/Products/{id}", method = RequestMethod.GET)
+    @ApiOperation(value = "Retrieve product with its ID")
+    @GetMapping(value = "/Products/{id}")
+    public Product showProduct(@PathVariable int id) throws ProductNotFoundException {
 
-    public Product showProduct(@PathVariable int id) {
-        return productDao.findById(id);
+        Product product = productDao.findById(id);
+
+        if (product == null) throw new ProductNotFoundException("Product with id " + id + " doesn't exist");
+
+        return product;
     }
 
     //Add product
+    @ApiOperation(value = "Add product")
     @PostMapping(value = "/Products")
-
-    public ResponseEntity<Void> addProduct(@RequestBody Product product) {
+    public ResponseEntity<Void> addProduct(@RequestBody @Valid Product product) {
         Product productAdded = productDao.save(product);
-
-        if (productAdded == null)
-            return ResponseEntity.noContent().build();
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -63,5 +55,33 @@ public class ProductController {
                 .toUri();
 
         return ResponseEntity.created(location).build();
+    }
+
+    //Update product
+    @ApiOperation(value = "Update product")
+    @PutMapping(value = "/Products")
+    public void updateProduct(@RequestBody Product product) {
+
+        productDao.save(product);
+    }
+
+    //Delete product
+    @ApiOperation(value = "Delete product")
+    @DeleteMapping(value = "/Products/{id}")
+    public void deleteProduct(@PathVariable int id) {
+
+        productDao.deleteById(id);
+    }
+
+    //Price filter
+    @GetMapping(value = "/search/price/{priceLimit}")
+    public List<Product> requestTest(@PathVariable int priceLimit) {
+        return productDao.searchForExpensiveProduct(priceLimit);
+    }
+
+    //Name search
+    @GetMapping(value = "/search/name/{search}")
+    public List<Product> requestTest2(@PathVariable String search) {
+        return productDao.findByNameLike("%" + search + "%");
     }
 }

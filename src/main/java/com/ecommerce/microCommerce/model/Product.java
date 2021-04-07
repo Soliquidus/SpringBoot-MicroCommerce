@@ -1,12 +1,25 @@
 package com.ecommerce.microCommerce.model;
 
 import com.fasterxml.jackson.annotation.JsonFilter;
+import org.hibernate.validator.constraints.Length;
 
-@JsonFilter("dynamicFilter")
+import javax.persistence.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+
+@Entity
+@Table(name = "products")
 public class Product {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+
+    @NotBlank
+    @Length(min = 3, max = 50)
     private String name;
+
+    @Min(value = 1)
     private int price;
 
     //Private information we don't want to be public
@@ -63,4 +76,5 @@ public class Product {
                 ", price=" + price +
                 '}';
     }
+
 }
